@@ -5,10 +5,16 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet, ethernet, ether_types
 from ryu.topology import event as topo_event
-from ryu.topology.api import get_switch, get_link
 import logging
 
 LOG = logging.getLogger('topology_detector')
+
+# Firewall rules — blocked MAC pairs (src, dst)
+# h1 = 00:00:00:00:00:01, h8 = 00:00:00:00:00:08
+BLOCKED_PAIRS = [
+    ('00:00:00:00:00:01', '00:00:00:00:00:08'),
+    ('00:00:00:00:00:08', '00:00:00:00:00:01'),
+]
 
 
 class TopologyChangeDetector(app_manager.RyuApp):
@@ -21,16 +27,26 @@ class TopologyChangeDetector(app_manager.RyuApp):
         self.links = {}
         self.mac_to_port = {}
         LOG.info("=== Topology Change Detector Started ===")
+        LOG.info("=== Firewall: h1 <--> h8 traffic is BLOCKED ===")
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
+
+        # Install table-miss entry (priority 0)
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
+
+        # Install DROP rules for blocked pairs (priority 10 — beats everything)
+        for (src_mac, dst_mac) in BLOCKED_PAIRS:
+            block_match = parser.OFPMatch(eth_src=src_mac, eth_dst=dst_mac)
+            self.add_flow(datapath, 10, block_match, [])  # empty actions = DROP
+            LOG.info("[FIREWALL] DROP rule installed on dpid=%d : %s --> %s",
+                     datapath.id, src_mac, dst_mac)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
@@ -99,6 +115,11 @@ class TopologyChangeDetector(app_manager.RyuApp):
         dst = eth.dst
         src = eth.src
         dpid = datapath.id
+
+        # Check firewall before doing anything
+        if (src, dst) in BLOCKED_PAIRS:
+            LOG.info("[FIREWALL] BLOCKED packet: %s --> %s on dpid=%d", src, dst, dpid)
+            return  # Drop silently
 
         self.mac_to_port.setdefault(dpid, {})
         self.mac_to_port[dpid][src] = in_port

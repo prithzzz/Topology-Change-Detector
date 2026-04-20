@@ -110,13 +110,15 @@ sudo python3 custom_topology.py
 #### Commands (inside Mininet CLI):
 
 ```bash
-# Full connectivity test — all pairs
 mininet> pingall
 
-# Specific host pair
-mininet> h1 ping -c 4 h8
+mininet> h1 ping -c 3 h2
+# Result: 0% loss (allowed case)
 
-# Verify flow rules were installed
+mininet> h1 ping -c 3 h8
+# Result: 100% packet loss (blocked case)
+
+# Verify the DROP rule is in the flow table
 mininet> dpctl dump-flows
 ```
 
