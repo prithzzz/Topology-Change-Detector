@@ -36,17 +36,15 @@ This project implements a Software Defined Networking (SDN) application that dyn
 Topology-Change-Detector/
 ├── topology_detector.py    ← Ryu controller app
 ├── custom_topology.py      ← Mininet topology script
-├── screenshots/            ← All proof-of-execution screenshots
-│   ├── 01_controller_start.png
-│   ├── 02_switch_discovery.png
-│   ├── 03_link_discovery.png
-│   ├── 04_mininet_topology.png
-│   ├── 05_pingall_success.png
-│   ├── 06_flow_table.png
-│   ├── 07_iperf_throughput.png
-│   ├── 08_link_failure.png
-│   ├── 09_link_restore.png
-│   └── 10_wireshark_openflow.png
+├── screenshots/            ← proof-of-execution screenshots
+│   ├── controller_starter.png
+│   ├── mininet_topology.png
+│   ├── pingall.png
+│   ├── flow_table.png
+│   ├── iperf.png
+│   ├── link_failure.png
+│   ├── link_restore.png
+│   └── wireshark.png
 └── README.md
 ```
 
